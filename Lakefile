@@ -1,0 +1,17 @@
+#|-*- mode:lisp -*-|#
+(in-package :cl-user)
+(defpackage :lake.user
+  (:use :cl :lake :cl-syntax)
+  (:shadowing-import-from :lake
+						  :directory))
+(in-package :lake.user)
+
+(use-syntax :interpol)
+ ;;; here follow your tasks...
+(task "test" ()
+	  (ql:quickload '(:prove :mylib :cl-debug-print :cl-ppcre))
+	  ;; 実際に利用するには下記が必要。slimeの利用時などに使って。
+	  ;; (cl-syntax:use-syntax cl-debug-print:debug-print-syntax)
+	  (load #P"sha-util.asd")
+	  (load #P"sha-util-test.asd")
+	  (asdf:test-system :sha-util-test))
