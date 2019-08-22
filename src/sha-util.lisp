@@ -25,11 +25,15 @@
 (defun hash (msg k)
   (let ((h '(#x67452301 #xEFCDAB89 #x98BADCFE #x10325476 #xC3D2E1F0))
 		(m msg))
-	(loop until (or (< (length m) 8) (string= m ""))
+	(loop until (string= m "")
 	   do (let ((w '()))
 			(dotimes (n 16)
-			  (push (read-from-string (concatenate 'string "#x" (subseq m 0 8))) w)
-			  (setf m (subseq m 8)))
+			  (cond ((< (length m) 8)
+					 (push (read-from-string (concatenate 'string "#x" (subseq m 0 (length m)))) w)
+					 (setf m ""))
+					(t
+					 (push (read-from-string (concatenate 'string "#x" (subseq m 0 8))) w)
+					 (setf m (subseq m 8)))))
 			(setf w (reverse w))
 			(dolist (i (mylib:range 16 79))
 			  (setf w (append w (list (rotate (logxor
@@ -40,24 +44,17 @@
 												(nth (- i 14) w))
 											   (nth (- i 16) w))
 											  1)))))
-			(main-loop h w k)))
+			(setf h (main-loop h w k))
+			(print h)))
 	(format nil "~{~A~}"
 			(mapcar #'(lambda (x)
-						(ppcre:regex-replace-all " " (format nil "~8x" x) "0")) h))))
+						(string-downcase (ppcre:regex-replace-all " " (format nil "~8x" x) "0")))
+					h))))
 
 
 (defun main-loop (h w k)
   (let ((h-2 (copy-list h)))
 	(dotimes (i 80)
-	  ;; (print "====================================")
-	  ;; (print h-2)
-	  ;; (print (logior (logand (nth 1 h-2) (nth 2 h-2))
-	  ;; 				 (logand (boole boole-c1 (nth 1 h-2) 2) (nth 3 h-2))))
-	  ;; (print (logior (logand (nth 1 h-2) (nth 2 h-2))
-	  ;; 				 p	  				 (logand (nth 1 h-2) (nth 3 h-2))
-	  ;; 				 (logand (nth 2 h-2) (nth 3 h-2))))
-	  ;; (print (logxor (nth 1 h-2) (nth 2 h-2) (nth 3 h-2)))
-	  ;; (print "====================================")
 	  (let ((f (cond ((<= i 19)
 					  (logior (logand (nth 1 h-2) (nth 2 h-2))
 							  (logand (boole boole-c1 (nth 1 h-2) 2) (nth 3 h-2))))
@@ -66,12 +63,12 @@
 							  (logand (nth 1 h-2) (nth 3 h-2))
 							  (logand (nth 2 h-2) (nth 3 h-2))))
 					 (t (logxor (nth 1 h-2) (nth 2 h-2) (nth 3 h-2))))))
-		(format t "~%~A ~A ~A ~A ~A" (rotate (nth 0 h-2) 5) (nth 4 h-2) f (nth (floor (/ i 20)) k) (nth i w))
-		(loop for x in (list (+ (rotate (nth 0 h-2) 5)
-								(nth 4 h-2)
-								f
-								(nth (floor (/ i 20)) k)
-								(nth i w))
+		(loop for x in (list (logand (+ (rotate (nth 0 h-2) 5)
+										(nth 4 h-2)
+										f
+										(nth (floor (/ i 20)) k)
+										(nth i w))
+									 #xffffffff)
 							 (nth 0 h-2)
 							 (rotate (nth 1 h-2) 30)
 							 (nth 2 h-2)
@@ -82,7 +79,8 @@
 	(loop for x in h-2
 	   for j in (mylib:range 0 4)
 	   do (progn
-			(setf (nth j h-2) (+ (nth j h-2) (logand x #xffffffff)))))))
+			(setf (nth j h-2) (logand (+ (nth j h) x) #xffffffff))))
+	h-2))
 
 (defun create-random-string ()
   (digest (write-to-string (get-universal-time))))
