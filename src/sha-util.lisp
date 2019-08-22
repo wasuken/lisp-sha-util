@@ -83,4 +83,5 @@
 	h-2))
 
 (defun create-random-string ()
+  (print (write-to-string (get-universal-time)))
   (digest (write-to-string (get-universal-time))))
